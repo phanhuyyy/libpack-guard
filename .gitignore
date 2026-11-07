@@ -1,0 +1,13 @@
+node_modules/
+!agent/testdata/**/node_modules/
+
+# Next.js
+ui/.next/
+ui/next-env.d.ts
+ui/*.tsbuildinfo
+ui/.env
+ui/.env.local
+
+# Go build output
+agent/dist/
+*.exe
