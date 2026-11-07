@@ -11,10 +11,13 @@ import {
   type T,
   type Theme,
 } from "./i18n";
+import { DEFAULT_PM, isPm, type PM } from "./pm";
 
 export type ServerI18n = {
   locale: Locale;
   theme: Theme;
+  /** active package manager workspace (cookie "pm") */
+  pm: PM;
   t: T;
   fd: (iso: string, dateOnly?: boolean) => string;
   fn: (n: number) => string;
@@ -26,9 +29,11 @@ export async function getI18n(): Promise<ServerI18n> {
   const lang = c.get("lang")?.value;
   const locale = isLocale(lang) ? lang : negotiate((await headers()).get("accept-language"));
   const th = c.get("theme")?.value;
+  const pmCookie = c.get("pm")?.value;
   return {
     locale,
     theme: isTheme(th) ? th : "system",
+    pm: isPm(pmCookie) ? pmCookie : DEFAULT_PM,
     t: makeT(locale),
     fd: (iso, dateOnly) => formatDate(iso, locale, dateOnly),
     fn: (n) => formatNumber(n, locale),

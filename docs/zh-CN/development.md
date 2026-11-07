@@ -67,11 +67,11 @@ npx next start -H 127.0.0.1 -p 7790
 | 更新后某个构建工具出错（esbuild、sharp…） | 由 `--ignore-scripts` 导致。如果信任该包：在项目目录中运行 `npm rebuild <名称>`。 |
 | 想要撤销某次更新 | 从 `%LOCALAPPDATA%\libpack\backups\<时间>\…` 将 `package.json` + `package-lock.json` 复制回项目，然后运行 `npm install --ignore-scripts`。 |
 | 无法查询 registry / OSV | 检查网络和代理。尚不支持需要认证的私有 registry（见[已知限制](#已知限制)）。 |
-| `latest.json` 损坏 | 界面会视为没有数据。点击 **立即扫描** 重新生成。 |
+| `latest-{pm}.json` 损坏 | 界面会视为没有数据。点击 **立即扫描** 重新生成。 |
 
 ## 已知限制
 
-- **仅支持 npm。** 不扫描 yarn、pnpm（使用 symlink，因此会被跳过）或 bun。也不扫描 VS Code 扩展或浏览器扩展中的包。
+- **仅支持 npm 和 pnpm。** 不扫描 yarn 或 bun。对于 pnpm，只能看到已安装的包（不读取 `pnpm-lock.yaml`）；pnpm *全局*包位于 pnpm 全局虚拟存储中的依赖不会列出，只列出全局包本身。也不扫描 VS Code 扩展或浏览器扩展中的包。
 - **只保留最近一次扫描**，没有变更历史。
 - **恶意软件检测基于已知列表**（OSV.dev）。全新的、尚无人报告的恶意包不会被发现。安装脚本分析只是迹象，可能误报或漏报；例如恶意代码位于脚本调用的 `.js` 文件中时无法发现，因为工具不读取源代码。
 - **“直接依赖”标记仅适用于 lockfile v2/v3。** 使用 lockfile v1 或没有 lockfile 的项目会在更新标签页中被跳过。

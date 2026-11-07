@@ -9,21 +9,61 @@ import (
 	"time"
 )
 
-// scanRoots walks each root (up to maxDepth) looking for package-lock.json files and node_modules dirs.
-func scanRoots(roots []string, maxDepth int) []Package {
+// Mode selects which package manager's world a scan looks at. npm and pnpm are kept apart:
+// an npm scan never reports pnpm packages and vice versa.
+type Mode string
+
+const (
+	ModeNPM  Mode = "npm"
+	ModePNPM Mode = "pnpm"
+)
+
+func parseMode(s string) (Mode, bool) {
+	switch Mode(s) {
+	case ModeNPM, ModePNPM:
+		return Mode(s), true
+	}
+	return "", false
+}
+
+// scanRoots walks each root (up to maxDepth) looking for projects of the given package manager.
+//
+//	npm:  package-lock.json + real folders in node_modules; pnpm projects are skipped entirely
+//	pnpm: node_modules/.pnpm store + top-level links (incl. workspace packages); nothing else
+func scanRoots(roots []string, maxDepth int, mode Mode) []Package {
 	var out []Package
 	var visit func(dir string, depth int)
 	visit = func(dir string, depth int) {
-		lock := filepath.Join(dir, "package-lock.json")
-		if data, err := readFileLimited(lock); err == nil {
-			if pkgs, err := parseLockfile(data, dir, lock); err == nil {
-				out = append(out, pkgs...)
+		pnpmProject := isPnpmProject(dir)
+		if mode == ModeNPM && !pnpmProject {
+			lock := filepath.Join(dir, "package-lock.json")
+			if data, err := readFileLimited(lock); err == nil {
+				if pkgs, err := parseLockfile(data, dir, lock); err == nil {
+					out = append(out, pkgs...)
+				}
 			}
 		}
 		for _, name := range plainSubdirs(dir) {
 			sub := filepath.Join(dir, name)
 			if name == "node_modules" {
-				out = append(out, scanNodeModules(sub, dir, "project", 0)...)
+				hasStore := lstatDir(filepath.Join(sub, ".pnpm"))
+				switch mode {
+				case ModeNPM:
+					if !pnpmProject && !hasStore {
+						out = append(out, scanNodeModules(sub, dir, "project", 0)...)
+					}
+				case ModePNPM:
+					// Also covers pnpm workspace packages whose node_modules only hold links
+					// into the root .pnpm store (those links are marked pnpm by pnpmDirectLinks).
+					for _, p := range scanPnpmLayout(sub, dir, "project") {
+						if pnpmProject || hasStore {
+							p.Manager = managerPnpm
+						}
+						if p.Manager == managerPnpm {
+							out = append(out, p)
+						}
+					}
+				}
 				continue
 			}
 			if shouldSkipDir(name) || depth >= maxDepth {
@@ -63,6 +103,9 @@ func dedupe(pkgs []Package) []Package {
 		}
 		cur.Direct = direct
 		cur.HasInstallScript = hasScript || len(cur.InstallScripts) > 0
+		if p.Manager == managerPnpm {
+			cur.Manager = managerPnpm
+		}
 		out[i] = cur
 	}
 	sort.Slice(out, func(a, b int) bool {
@@ -77,10 +120,20 @@ func dedupe(pkgs []Package) []Package {
 	return out
 }
 
-func runScan(cfg Config) Result {
-	pkgs := scanGlobal(globalDirs())
-	pkgs = append(pkgs, scanRoots(cfg.Roots, cfg.MaxDepth)...)
+func runScan(cfg Config, mode Mode) Result {
+	var pkgs []Package
+	switch mode {
+	case ModeNPM:
+		pkgs = scanGlobal(globalDirs())
+	case ModePNPM:
+		pkgs = scanPnpmGlobal(pnpmGlobalDirs())
+	}
+	pkgs = append(pkgs, scanRoots(cfg.Roots, cfg.MaxDepth, mode)...)
+	if mode == ModePNPM {
+		pkgs = prunePnpmOrphans(pkgs)
+	}
 	return Result{
+		Manager:      string(mode),
 		Machine:      currentMachine(),
 		AgentVersion: version,
 		ScannedAt:    time.Now().UTC().Format(time.RFC3339),

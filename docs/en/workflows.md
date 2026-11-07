@@ -52,10 +52,10 @@ sequenceDiagram
     A->>A: Scan the global npm folder
     A->>A: Walk the root folders (see diagram below)
     A->>A: Dedupe on name + version + project_root
-    A->>D: Write latest.json (write temp file, then rename)
+    A->>D: Write latest-{pm}.json (write temp file, then rename)
     A-->>S: "Scanned N packages"
     S-->>B: { ok: true }
-    B->>B: router.refresh() — page re-reads latest.json
+    B->>B: router.refresh() — page re-reads latest-{pm}.json
 ```
 
 **How pkgscan walks folders:**
@@ -111,7 +111,7 @@ flowchart TD
     D1 --> Merge
     Read --> Merge["Merge + dedupe<br/>(name, version, project_root)"]
     Merge --> Rule["The node_modules record wins<br/>(proves it is installed, has metadata)<br/>but keeps the direct flag from the lockfile"]
-    Rule --> Out[("latest.json")]
+    Rule --> Out[("latest-{pm}.json")]
 ```
 
 Each record has a `scope`:
@@ -175,7 +175,7 @@ The Security tab combines two sources: **offline analysis** of install scripts, 
 ```mermaid
 flowchart TB
     subgraph Offline["Offline — always runs"]
-        S1["install_scripts in latest.json"] --> H["Heuristic rules"]
+        S1["install_scripts in latest-{pm}.json"] --> H["Heuristic rules"]
         H --> Lv{"Level"}
         Lv -- "pipe into a shell, touches .npmrc/.ssh/token,<br/>webhook / pastebin / ngrok,<br/>reverse shell" --> Crit["Highly suspicious"]
         Lv -- "curl/wget/iwr, invokes PowerShell/shell,<br/>node -e / eval, base64 / obfuscation,<br/>URL / IP, runs hidden" --> High["Suspicious"]
@@ -188,7 +188,7 @@ flowchart TB
         Det --> Cls{"Classify"}
         Cls -- "id or alias is MAL-*<br/>or CWE-506" --> Mal["Malware"]
         Cls -- "everything else" --> Vul["Vulnerability<br/>(severity from GHSA)"]
-        Mal --> SJ[("security.json")]
+        Mal --> SJ[("security-{pm}.json")]
         Vul --> SJ
     end
 
@@ -226,7 +226,7 @@ sequenceDiagram
     U->>B: Click "Update"
     B->>F: POST { root, name, version, mode: "plan" }
     F->>P: planAction()
-    P->>P: In latest.json? Not malware?
+    P->>P: In latest-{pm}.json? Not malware?
     P->>P: Fixed version = nearest fix of each advisory,<br/>take the highest of those
     P->>P: Choose the action (table below)
     P-->>B: Description + exact command
@@ -246,7 +246,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    R["Record in latest.json"] --> G{"scope"}
+    R["Record in latest-{pm}.json"] --> G{"scope"}
     G -- global --> Top{"Top level?"}
     Top -- Yes --> A1["npm install -g --prefix P<br/>--ignore-scripts name@fixed"]
     Top -- "No (inside another package)" --> A2["npm install -g --prefix P<br/>--ignore-scripts parent@latest"]
@@ -277,7 +277,7 @@ flowchart TD
     Major --> Def
     Def -- "has minor" --> SelMinor["Select minor ✓"]
     Def -- "major only" --> SelNone["Not selected — 'Only a new major is available'"]
-    Row --> MalChk{"Malware<br/>according to security.json?"}
+    Row --> MalChk{"Malware<br/>according to security-{pm}.json?"}
     MalChk -- Yes --> Block["Removed from the plan<br/>'remove it, do not update'"]
     SelMinor --> Out
     SelNone --> Out

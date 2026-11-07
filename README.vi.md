@@ -16,6 +16,8 @@ Mọi thứ chạy **cục bộ** (`127.0.0.1`), không cần tài khoản và k
   - lập kế hoạch cho mọi dự án, mặc định chỉ nâng patch/minor;
   - cập nhật từng package bằng một nút bấm (có xác nhận và sao lưu), hoặc tải script `.ps1` / `.sh` để tự chạy.
 - 🩹 **Vá lỗ hổng một chạm:** server tự chọn cách vá đúng (cài bản vá, `npm update`, hay cập nhật package cha), rồi quét lại để xác nhận.
+- 📦 **npm và pnpm tách riêng:** chọn **npm** hoặc **pnpm** ở thanh trên cùng. Quét, tìm kiếm, kiểm tra bảo mật và cập nhật chỉ làm trên phần đang chọn, mỗi phần có file dữ liệu riêng (`latest-npm.json` / `latest-pnpm.json`) và chỉ chạy đúng trình quản lý package đó. Dự án pnpm được đọc từ `node_modules/.pnpm` (bỏ qua bản cũ mồ côi), có cả package global của pnpm.
+- 🗑️ **Gỡ bỏ:** gỡ package trực tiếp hoặc package global cấp trên cùng (ví dụ package độc hại) ngay trên giao diện, có xác nhận, sao lưu và tự quét lại.
 - 🗂️ **Chọn thư mục quét ngay trên giao diện**, kèm bộ duyệt thư mục.
 - 🌐 **Tiếng Việt / English / 简体中文**, giao diện **Sáng / Tối / Theo hệ thống**.
 
@@ -57,7 +59,7 @@ flowchart LR
     UI["Trình duyệt<br/>127.0.0.1:7788"] <--> S["Next.js server"]
     S -- "chạy" --> A["pkgscan (Go)<br/>chỉ đọc file"]
     A -- "đọc" --> P["package-lock.json<br/>node_modules/**/package.json"]
-    A -- "ghi" --> D[("latest.json")]
+    A -- "ghi" --> D[("latest-{pm}.json")]
     S -- "khi bấm" --> N["registry.npmjs.org<br/>api.osv.dev"]
     S -- "khi xác nhận<br/>--ignore-scripts" --> NPM["npm"]
 ```
@@ -82,14 +84,14 @@ Chi tiết: [docs/security.md](docs/vi/security.md).
 | Tài liệu | Nội dung |
 |---|---|
 | [Workflow](docs/vi/workflows.md) | Các màn hình; quét, kiểm tra phiên bản, kiểm tra bảo mật, vá lỗ hổng, cập nhật, i18n (kèm sơ đồ) |
-| [Kiến trúc](docs/vi/architecture.md) | Sơ đồ tổng thể, cấu trúc mã nguồn, định dạng `latest.json` / `security.json` / `config.json`, biến môi trường |
+| [Kiến trúc](docs/vi/architecture.md) | Sơ đồ tổng thể, cấu trúc mã nguồn, định dạng `latest-{pm}.json` / `security-{pm}.json` / `config.json`, biến môi trường |
 | [Mô hình an toàn](docs/vi/security.md) | Quyền hạn từng thành phần, các rào chắn khi chạy npm, rủi ro và biện pháp |
 | [API và dòng lệnh](docs/vi/api.md) | API nội bộ của UI, lệnh `pkgscan scan / find` |
 | [Phát triển](docs/vi/development.md) | Build, test, thêm ngôn ngữ, xử lý sự cố, giới hạn đã biết |
 
 ## Giới hạn chính
 
-- Chỉ hỗ trợ **npm** (chưa hỗ trợ yarn, pnpm, bun).
+- Chỉ hỗ trợ **npm** và **pnpm** (chưa hỗ trợ yarn, bun).
 - Chỉ phát hiện mã độc **đã được báo cáo**. Phân tích script cài đặt chỉ là dấu hiệu, không phải kết luận.
 - Ứng dụng chạy **trên từng máy**, nên không đưa lên cloud nguyên trạng được.
 

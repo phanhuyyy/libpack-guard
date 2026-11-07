@@ -10,20 +10,21 @@ Mọi API chỉ phục vụ giao diện trên chính máy này. Các API có tá
 |---|---|---|---|---|
 | `POST` | `/api/scan` | — | `{ ok, message }` | Chạy `pkgscan scan` |
 | `GET` | `/api/registry` | `?name=&versions=a,b` | `RegistryInfo` (`latest`, `inMajor`, `deprecated`, `missing`…) | Gọi registry (cache 30 phút) |
-| `POST` | `/api/security` | — | `{ ok, malware, vulns }` | Gọi OSV, ghi `security.json` |
+| `POST` | `/api/security` | — | `{ ok, malware, vulns }` | Gọi OSV, ghi `security-{pm}.json` |
 | `POST` | `/api/fs` | `{ path? }` | `{ shortcuts }` hoặc `{ path, parent, dirs[] }` | Chỉ liệt kê tên thư mục |
 | `POST` | `/api/config` | `{ roots[], max_depth }` | `{ ok, config }` | Ghi `config.json` |
 | `POST` | `/api/fix` | `{ root, name, version, mode: "plan" \| "apply", target? }` | `plan`: `{ action }` · `apply`: `{ status, after[], log, backup, action }` | `apply`: **chạy npm**, sao lưu, quét lại, kiểm tra lại OSV |
+| `POST` | `/api/uninstall` | `{ root, name, version, mode: "plan" \| "apply" }` | `plan`: `{ action }` · `apply`: `{ status: "removed" \| "stillPresent", after[], log, backup, action }` | `apply`: **chạy `npm uninstall`** (chỉ package trực tiếp hoặc global cấp trên cùng), sao lưu, quét lại, kiểm tra lại OSV |
 
 `/api/fix` không có `target` thì là **vá lỗ hổng** (server tự chọn bản vá). Có `target` thì là **nâng cấp** từ tab Cập nhật (server xác minh `target`).
 
 ## Dòng lệnh pkgscan
 
 ```text
-pkgscan scan              Quét và lưu kết quả vào thư mục dữ liệu
-pkgscan scan --dry-run    Quét và in JSON ra màn hình, không lưu
-pkgscan find <tên> [--version <phiên bản>]
-                          Tìm package trong kết quả quét gần nhất
+pkgscan scan [--manager npm|pnpm]            Quét và lưu kết quả (mặc định: cả hai, mỗi loại một file)
+pkgscan scan --manager npm|pnpm --dry-run    Quét một loại và in JSON ra màn hình, không lưu
+pkgscan find <tên> [--version <phiên bản>] [--manager npm|pnpm]
+                                             Tìm package trong kết quả quét gần nhất
 pkgscan version
 ```
 

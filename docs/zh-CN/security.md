@@ -7,7 +7,7 @@
 | 组件 | 读取 | 写入 | 运行进程 | 网络 |
 |---|---|---|---|---|
 | **pkgscan** | 仅 `package-lock.json` 和 `node_modules/**/package.json` | 仅 libpack 数据目录 | **从不**（有测试禁止导入 `os/exec`、`syscall`） | **无** |
-| **界面服务器** | `latest.json`、`security.json`、`config.json`；子目录名称（目录浏览器） | `config.json`、`security.json`、`backups/` | `pkgscan scan`；`npm` **仅在用户确认后** | registry.npmjs.org、api.osv.dev，仅在点击时 |
+| **界面服务器** | `latest-{pm}.json`、`security-{pm}.json`、`config.json`；子目录名称（目录浏览器） | `config.json`、`security-{pm}.json`、`backups/` | `pkgscan scan`；`npm` **仅在用户确认后** | registry.npmjs.org、api.osv.dev，仅在点击时 |
 | **浏览器** | 通过 API | Cookie `lang`、`theme` | 无 | 仅访问 `127.0.0.1` |
 
 ## 运行 npm 时的防护措施
@@ -16,7 +16,7 @@
 flowchart TD
     Click["用户点击“运行更新”"] --> O1{"Origin = 界面 且<br/>Host 是 loopback？"}
     O1 -- 否 --> X1["403"]
-    O1 -- 是 --> O2{"记录存在于<br/>latest.json？"}
+    O1 -- 是 --> O2{"记录存在于<br/>latest-{pm}.json？"}
     O2 -- 否 --> X2["拒绝"]
     O2 -- 是 --> O3{"当前包<br/>是恶意软件？"}
     O3 -- 是 --> X3["拒绝：请移除"]

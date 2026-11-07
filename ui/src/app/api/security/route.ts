@@ -6,12 +6,12 @@ import { malwarePackages, runSecurityCheck } from "@/lib/security";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const { t } = await getI18n();
+  const { t, pm } = await getI18n();
   if (!sameOrigin(req)) return Response.json({ ok: false, error: t("common.forbidden") }, { status: 403 });
-  const res = await loadResult();
+  const res = await loadResult(pm);
   if (!res) return Response.json({ ok: false, error: t("common.noData") }, { status: 400 });
   try {
-    const report = await runSecurityCheck(res.packages, res.scanned_at);
+    const report = await runSecurityCheck(res.packages, res.scanned_at, pm);
     return Response.json({
       ok: true,
       malware: malwarePackages(report).length,

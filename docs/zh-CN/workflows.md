@@ -52,10 +52,10 @@ sequenceDiagram
     A->>A: 扫描全局 npm 目录
     A->>A: 遍历各根目录 (见下图)
     A->>A: 按 name + version + project_root 去重
-    A->>D: 写入 latest.json (先写临时文件再重命名)
+    A->>D: 写入 latest-{pm}.json (先写临时文件再重命名)
     A-->>S: "已扫描 N 个包"
     S-->>B: { ok: true }
-    B->>B: router.refresh() — 页面重新读取 latest.json
+    B->>B: router.refresh() — 页面重新读取 latest-{pm}.json
 ```
 
 **pkgscan 如何遍历目录：**
@@ -111,7 +111,7 @@ flowchart TD
     D1 --> Merge
     Read --> Merge["合并 + 去重<br/>（name, version, project_root）"]
     Merge --> Rule["以 node_modules 的记录为准<br/>（证明已安装，且有元数据）<br/>但保留 lockfile 中的 direct 标记"]
-    Rule --> Out[("latest.json")]
+    Rule --> Out[("latest-{pm}.json")]
 ```
 
 每条记录都有 `scope`：
@@ -175,7 +175,7 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     subgraph Offline["离线 — 始终运行"]
-        S1["latest.json 中的 install_scripts"] --> H["启发式规则集"]
+        S1["latest-{pm}.json 中的 install_scripts"] --> H["启发式规则集"]
         H --> Lv{"等级"}
         Lv -- "管道交给 shell、访问 .npmrc/.ssh/令牌、<br/>webhook / pastebin / ngrok、<br/>反弹 shell" --> Crit["高度可疑"]
         Lv -- "curl/wget/iwr、调用 PowerShell/shell、<br/>node -e / eval、base64 / 混淆、<br/>URL / IP、隐藏运行" --> High["可疑"]
@@ -188,7 +188,7 @@ flowchart TB
         Det --> Cls{"分类"}
         Cls -- "id 或别名为 MAL-*<br/>或 CWE-506" --> Mal["恶意软件"]
         Cls -- "其余" --> Vul["漏洞<br/>（严重程度取自 GHSA）"]
-        Mal --> SJ[("security.json")]
+        Mal --> SJ[("security-{pm}.json")]
         Vul --> SJ
     end
 
@@ -226,7 +226,7 @@ sequenceDiagram
     U->>B: 点击“更新”
     B->>F: POST { root, name, version, mode: "plan" }
     F->>P: planAction()
-    P->>P: 在 latest.json 中？不是恶意软件？
+    P->>P: 在 latest-{pm}.json 中？不是恶意软件？
     P->>P: 修复版本 = 每条公告最近的修复版本，<br/>再取其中最大的一个
     P->>P: 选择操作 (见下表)
     P-->>B: 说明 + 确切命令
@@ -246,7 +246,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    R["latest.json 中的记录"] --> G{"scope"}
+    R["latest-{pm}.json 中的记录"] --> G{"scope"}
     G -- global --> Top{"位于顶层？"}
     Top -- 是 --> A1["npm install -g --prefix P<br/>--ignore-scripts 名称@修复版本"]
     Top -- "否（位于其他包内部）" --> A2["npm install -g --prefix P<br/>--ignore-scripts 父包@latest"]
@@ -277,7 +277,7 @@ flowchart TD
     Major --> Def
     Def -- "有 minor" --> SelMinor["选中 minor ✓"]
     Def -- "只有 major" --> SelNone["不选 — “仅有新的主版本”"]
-    Row --> MalChk{"根据 security.json<br/>是恶意包？"}
+    Row --> MalChk{"根据 security-{pm}.json<br/>是恶意包？"}
     MalChk -- 是 --> Block["从计划中排除<br/>“请移除，不要更新”"]
     SelMinor --> Out
     SelNone --> Out

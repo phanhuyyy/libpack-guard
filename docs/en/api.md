@@ -10,20 +10,21 @@ Every API serves only the UI on this same machine. APIs with side effects (POST)
 |---|---|---|---|---|
 | `POST` | `/api/scan` | — | `{ ok, message }` | Runs `pkgscan scan` |
 | `GET` | `/api/registry` | `?name=&versions=a,b` | `RegistryInfo` (`latest`, `inMajor`, `deprecated`, `missing`…) | Calls the registry (30-minute cache) |
-| `POST` | `/api/security` | — | `{ ok, malware, vulns }` | Calls OSV, writes `security.json` |
+| `POST` | `/api/security` | — | `{ ok, malware, vulns }` | Calls OSV, writes `security-{pm}.json` |
 | `POST` | `/api/fs` | `{ path? }` | `{ shortcuts }` or `{ path, parent, dirs[] }` | Lists folder names only |
 | `POST` | `/api/config` | `{ roots[], max_depth }` | `{ ok, config }` | Writes `config.json` |
 | `POST` | `/api/fix` | `{ root, name, version, mode: "plan" \| "apply", target? }` | `plan`: `{ action }` · `apply`: `{ status, after[], log, backup, action }` | `apply`: **runs npm**, backs up, rescans, re-checks OSV |
+| `POST` | `/api/uninstall` | `{ root, name, version, mode: "plan" \| "apply" }` | `plan`: `{ action }` · `apply`: `{ status: "removed" \| "stillPresent", after[], log, backup, action }` | `apply`: **runs `npm uninstall`** (direct or top-level global only), backs up, rescans, re-checks OSV |
 
 Without `target`, `/api/fix` is a **vulnerability fix** (the server picks the fixed version). With `target`, it is an **upgrade** from the Updates tab (the server verifies `target`).
 
 ## pkgscan command line
 
 ```text
-pkgscan scan              Scan and save the result to the data folder
-pkgscan scan --dry-run    Scan and print JSON to the screen, without saving
-pkgscan find <name> [--version <version>]
-                          Find a package in the latest scan result
+pkgscan scan [--manager npm|pnpm]            Scan and save (default: both, one file each)
+pkgscan scan --manager npm|pnpm --dry-run    Scan one package manager and print JSON, without saving
+pkgscan find <name> [--version <version>] [--manager npm|pnpm]
+                                             Find a package in the latest scan results
 pkgscan version
 ```
 

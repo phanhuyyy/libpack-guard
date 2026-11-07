@@ -10,7 +10,7 @@ import UpgradeButton from "./UpgradeButton";
 import { useI18n } from "./I18nProvider";
 import { lookup, pool, type Lookup } from "./registry-client";
 
-export type Candidate = { root: string; scope: "global" | "project"; name: string; version: string };
+export type Candidate = { root: string; scope: "global" | "project"; name: string; version: string; manager: "npm" | "pnpm" };
 
 type Props = {
   candidates: Candidate[];
@@ -92,7 +92,7 @@ export default function UpdatePlanner({ candidates, windows, malware, vulnFixes,
 
   const selected: Selected[] = rows
     .filter((r) => !r.malicious && choice[r.key] && !done[r.key])
-    .map((r) => ({ root: r.root, global: r.scope === "global", name: r.name, target: choice[r.key] }));
+    .map((r) => ({ root: r.root, global: r.scope === "global", name: r.name, target: choice[r.key], manager: r.manager }));
   const planGroups = groupByRoot(selected);
   const script = planGroups.length ? fullScript(planGroups, windows, new Date().toISOString()) : "";
 

@@ -67,11 +67,11 @@ npx next start -H 127.0.0.1 -p 7790
 | Sau khi cập nhật, một công cụ build lỗi (esbuild, sharp…) | Do `--ignore-scripts`. Nếu tin tưởng package đó: `npm rebuild <tên>` trong thư mục dự án. |
 | Muốn hoàn tác một cập nhật | Chép `package.json` + `package-lock.json` từ `%LOCALAPPDATA%\libpack\backups\<thời điểm>\…` về dự án, rồi chạy `npm install --ignore-scripts`. |
 | Không tra được registry / OSV | Kiểm tra mạng và proxy. Registry riêng cần xác thực chưa được hỗ trợ (xem [Giới hạn đã biết](#giới-hạn-đã-biết)). |
-| `latest.json` hỏng | UI coi như chưa có dữ liệu. Bấm **Quét ngay** để tạo lại. |
+| `latest-{pm}.json` hỏng | UI coi như chưa có dữ liệu. Bấm **Quét ngay** để tạo lại. |
 
 ## Giới hạn đã biết
 
-- **Chỉ hỗ trợ npm.** Không quét yarn, pnpm (dùng symlink nên bị bỏ qua) hay bun. Cũng không quét package của extension VS Code hay trình duyệt.
+- **Chỉ hỗ trợ npm và pnpm.** Không quét yarn hay bun. Với pnpm, công cụ chỉ thấy package đã được cài (không đọc `pnpm-lock.yaml`); phụ thuộc của package *global* pnpm nằm trong kho ảo toàn cục của pnpm không được liệt kê, chỉ có bản thân package global. Cũng không quét package của extension VS Code hay trình duyệt.
 - **Chỉ giữ lần quét mới nhất**, không có lịch sử thay đổi.
 - **Phát hiện mã độc dựa trên danh sách đã biết** (OSV.dev). Package độc hại mới tinh, chưa ai báo cáo, sẽ không bị phát hiện. Phân tích script cài đặt chỉ là dấu hiệu, có thể báo nhầm hoặc bỏ sót; ví dụ mã độc nằm trong file `.js` mà script gọi tới thì không thấy được, vì công cụ không đọc mã nguồn.
 - **Đánh dấu "trực tiếp" chỉ có với lockfile v2/v3.** Dự án dùng lockfile v1 hoặc không có lockfile sẽ bị bỏ qua ở tab Cập nhật.

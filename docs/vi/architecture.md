@@ -23,7 +23,7 @@ flowchart TB
     subgraph Disk["Ổ đĩa của máy"]
         Projects["Dự án:<br/>package-lock.json<br/>node_modules/**/package.json"]
         Global["npm toàn cục:<br/>%AppData%\npm\node_modules"]
-        DataDir["Thư mục dữ liệu libpack:<br/>latest.json, security.json,<br/>config.json, backups/"]
+        DataDir["Thư mục dữ liệu libpack:<br/>latest-{pm}.json, security-{pm}.json,<br/>config.json, backups/"]
     end
 
     subgraph Internet["Internet — chỉ khi người dùng bấm"]
@@ -38,7 +38,7 @@ flowchart TB
     Lib -- "execFile, không shell" --> Scan
     Scan -- "chỉ đọc" --> Projects
     Scan -- "chỉ đọc" --> Global
-    Scan -- "ghi latest.json" --> DataDir
+    Scan -- "ghi latest-{pm}.json" --> DataDir
     Lib -- "đọc / ghi" --> DataDir
     Lib -- "GET metadata" --> Registry
     Lib -- "tên + phiên bản" --> OSV
@@ -63,7 +63,7 @@ libpack-guard/
 │   └── <ngôn ngữ>/{workflows, architecture, security, api, development}.md
 ├── .gitignore
 ├── agent/                          # pkgscan — Go, chỉ thư viện chuẩn
-│   ├── main.go                     # lệnh scan / find / version, ghi latest.json
+│   ├── main.go                     # lệnh scan / find / version, ghi latest-{pm}.json
 │   ├── config.go                   # đọc config.json (thư mục dữ liệu → cạnh exe → mặc định)
 │   ├── datadir.go                  # thư mục dữ liệu theo hệ điều hành
 │   ├── walk.go                     # duyệt an toàn: isPlainDir, giới hạn 50 MB, danh sách bỏ qua
@@ -93,11 +93,11 @@ libpack-guard/
         │   ├── UpdatePlanner, UpgradeButton, FixButton
         │   └── FolderPicker, ScanSettings
         └── lib/
-            ├── data.ts             # đọc latest.json (cache theo mtime), tổng hợp dự án
+            ├── data.ts             # đọc latest-{pm}.json (cache theo mtime), tổng hợp dự án
             ├── agent.ts            # chạy pkgscan
             ├── config.ts           # đọc / ghi config.json, liệt kê thư mục
             ├── heuristics.ts       # luật phân tích script cài đặt
-            ├── security.ts         # OSV querybatch / query, phân loại mã độc, security.json
+            ├── security.ts         # OSV querybatch / query, phân loại mã độc, security-{pm}.json
             ├── registry.ts         # npm registry + bestCompatible
             ├── updater.ts          # planAction / planUpgrade / applyAction (chạy npm)
             ├── update-script.ts    # tạo lệnh và script .ps1 / .sh
@@ -108,6 +108,8 @@ libpack-guard/
 ```
 
 ## Dữ liệu và định dạng file
+
+> `{pm}` là `npm` hoặc `pnpm`. Hai trình quản lý package được tách hẳn: mỗi bên có file quét và báo cáo bảo mật riêng, chọn bằng bộ chuyển npm / pnpm trên thanh trên cùng (cookie `pm`).
 
 ### Thư mục dữ liệu
 
@@ -121,8 +123,8 @@ Có thể ghi đè bằng biến môi trường `LIBPACK_DATA_DIR`. Cả pkgscan
 
 ```
 libpack/
-├── latest.json        # kết quả quét gần nhất (pkgscan ghi)
-├── security.json      # kết quả đối chiếu OSV gần nhất (UI ghi)
+├── latest-{pm}.json        # kết quả quét gần nhất (pkgscan ghi)
+├── security-{pm}.json      # kết quả đối chiếu OSV gần nhất (UI ghi)
 ├── config.json        # thư mục quét + độ sâu (UI ghi, pkgscan đọc)
 └── backups/
     └── 2026-11-07T06-43-41-007Z/
@@ -131,7 +133,7 @@ libpack/
             └── package-lock.json
 ```
 
-### `latest.json`
+### `latest-{pm}.json`
 
 ```jsonc
 {
@@ -159,7 +161,7 @@ libpack/
 
 Các bản ghi được loại trùng theo **`name + version + project_root`**.
 
-### `security.json`
+### `security-{pm}.json`
 
 ```jsonc
 {

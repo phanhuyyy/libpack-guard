@@ -7,7 +7,7 @@
 | Thành phần | Đọc | Ghi | Chạy tiến trình | Mạng |
 |---|---|---|---|---|
 | **pkgscan** | Chỉ `package-lock.json` và `node_modules/**/package.json` | Chỉ thư mục dữ liệu libpack | **Không bao giờ** (có test chặn import `os/exec`, `syscall`) | **Không** |
-| **Server UI** | `latest.json`, `security.json`, `config.json`; tên thư mục con (bộ duyệt) | `config.json`, `security.json`, `backups/` | `pkgscan scan`; `npm` **chỉ khi người dùng xác nhận** | registry.npmjs.org, api.osv.dev, chỉ khi bấm |
+| **Server UI** | `latest-{pm}.json`, `security-{pm}.json`, `config.json`; tên thư mục con (bộ duyệt) | `config.json`, `security-{pm}.json`, `backups/` | `pkgscan scan`; `npm` **chỉ khi người dùng xác nhận** | registry.npmjs.org, api.osv.dev, chỉ khi bấm |
 | **Trình duyệt** | Qua API | Cookie `lang`, `theme` | Không | Chỉ tới `127.0.0.1` |
 
 ## Rào chắn khi chạy npm
@@ -16,7 +16,7 @@
 flowchart TD
     Click["Người dùng bấm 'Chạy cập nhật'"] --> O1{"Origin = UI và<br/>Host là loopback?"}
     O1 -- Không --> X1["403"]
-    O1 -- Có --> O2{"Bản ghi có trong<br/>latest.json?"}
+    O1 -- Có --> O2{"Bản ghi có trong<br/>latest-{pm}.json?"}
     O2 -- Không --> X2["Từ chối"]
     O2 -- Có --> O3{"Package hiện tại<br/>là mã độc?"}
     O3 -- Có --> X3["Từ chối: hãy gỡ bỏ"]

@@ -12,7 +12,7 @@ export const maxDuration = 900;
  * The client only identifies an installation from the scan; the server builds the npm command.
  */
 export async function POST(req: Request) {
-  const { t } = await getI18n();
+  const { t, pm } = await getI18n();
   if (!sameOrigin(req)) return Response.json({ ok: false, error: t("common.forbidden") }, { status: 403 });
   const body = (await req.json().catch(() => null)) as
     | { root?: unknown; name?: unknown; version?: unknown; mode?: unknown; target?: unknown }
@@ -26,12 +26,12 @@ export async function POST(req: Request) {
   const target = body.target as string | undefined;
   try {
     if (body.mode === "apply") {
-      const out = await applyAction(body.root, body.name, body.version, target);
+      const out = await applyAction(pm, body.root, body.name, body.version, target);
       return Response.json({ ok: true, ...out });
     }
     const action = target
-      ? await planUpgrade(body.root, body.name, body.version, target)
-      : await planAction(body.root, body.name, body.version);
+      ? await planUpgrade(pm, body.root, body.name, body.version, target)
+      : await planAction(pm, body.root, body.name, body.version);
     return Response.json({ ok: true, action });
   } catch (e) {
     return Response.json({ ok: false, error: errorMessage(e, t) }, { status: 400 });

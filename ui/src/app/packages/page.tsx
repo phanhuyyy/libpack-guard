@@ -16,7 +16,8 @@ const MAX_ROWS = 500;
 type SP = Promise<{ q?: string; v?: string; exact?: string }>;
 
 export default async function PackagesPage({ searchParams }: { searchParams: SP }) {
-  const [{ q = "", v = "", exact }, { t, fd, fn }, res] = await Promise.all([searchParams, getI18n(), loadResult()]);
+  const [{ q = "", v = "", exact }, { t, fd, fn, pm }] = await Promise.all([searchParams, getI18n()]);
+  const res = await loadResult(pm);
   const query = q.trim().toLowerCase();
   const ver = v.trim();
   const isExact = exact === "1";

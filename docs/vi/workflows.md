@@ -52,10 +52,10 @@ sequenceDiagram
     A->>A: Quét thư mục npm toàn cục
     A->>A: Duyệt các thư mục gốc (xem sơ đồ dưới)
     A->>A: Loại trùng name + version + project_root
-    A->>D: Ghi latest.json (ghi file tạm rồi đổi tên)
+    A->>D: Ghi latest-{pm}.json (ghi file tạm rồi đổi tên)
     A-->>S: "Đã quét N package"
     S-->>B: { ok: true }
-    B->>B: router.refresh() — trang đọc lại latest.json
+    B->>B: router.refresh() — trang đọc lại latest-{pm}.json
 ```
 
 **Cách pkgscan duyệt thư mục:**
@@ -111,7 +111,7 @@ flowchart TD
     D1 --> Merge
     Read --> Merge["Gộp + loại trùng<br/>(name, version, project_root)"]
     Merge --> Rule["Bản ghi từ node_modules thắng<br/>(chứng tỏ đã cài, có metadata)<br/>nhưng giữ cờ direct từ lockfile"]
-    Rule --> Out[("latest.json")]
+    Rule --> Out[("latest-{pm}.json")]
 ```
 
 Mỗi bản ghi có `scope`:
@@ -175,7 +175,7 @@ Tab Bảo mật kết hợp hai nguồn: **phân tích offline** các script cà
 ```mermaid
 flowchart TB
     subgraph Offline["Offline — luôn chạy"]
-        S1["install_scripts trong latest.json"] --> H["Bộ luật heuristics"]
+        S1["install_scripts trong latest-{pm}.json"] --> H["Bộ luật heuristics"]
         H --> Lv{"Mức độ"}
         Lv -- "pipe vào shell, đụng .npmrc/.ssh/token,<br/>webhook / pastebin / ngrok,<br/>reverse shell" --> Crit["Rất đáng ngờ"]
         Lv -- "curl/wget/iwr, gọi PowerShell/shell,<br/>node -e / eval, base64 / che giấu,<br/>URL / IP, chạy ẩn" --> High["Đáng ngờ"]
@@ -188,7 +188,7 @@ flowchart TB
         Det --> Cls{"Phân loại"}
         Cls -- "id hoặc alias là MAL-*<br/>hoặc CWE-506" --> Mal["Mã độc"]
         Cls -- "còn lại" --> Vul["Lỗ hổng<br/>(severity từ GHSA)"]
-        Mal --> SJ[("security.json")]
+        Mal --> SJ[("security-{pm}.json")]
         Vul --> SJ
     end
 
@@ -226,7 +226,7 @@ sequenceDiagram
     U->>B: Bấm "Cập nhật"
     B->>F: POST { root, name, version, mode: "plan" }
     F->>P: planAction()
-    P->>P: Có trong latest.json? Không phải mã độc?
+    P->>P: Có trong latest-{pm}.json? Không phải mã độc?
     P->>P: Bản vá = bản vá gần nhất của từng advisory,<br/>lấy bản lớn nhất trong số đó
     P->>P: Chọn hành động (bảng dưới)
     P-->>B: Mô tả + lệnh chính xác
@@ -246,7 +246,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    R["Bản ghi trong latest.json"] --> G{"scope"}
+    R["Bản ghi trong latest-{pm}.json"] --> G{"scope"}
     G -- global --> Top{"Ở cấp trên cùng?"}
     Top -- Có --> A1["npm install -g --prefix P<br/>--ignore-scripts tên@bản-vá"]
     Top -- "Không (nằm trong package khác)" --> A2["npm install -g --prefix P<br/>--ignore-scripts cha@latest"]
@@ -277,7 +277,7 @@ flowchart TD
     Major --> Def
     Def -- "có minor" --> SelMinor["Chọn minor ✓"]
     Def -- "chỉ có major" --> SelNone["Không chọn — 'Chỉ có bản major mới'"]
-    Row --> MalChk{"Là mã độc<br/>theo security.json?"}
+    Row --> MalChk{"Là mã độc<br/>theo security-{pm}.json?"}
     MalChk -- Có --> Block["Loại khỏi kế hoạch<br/>'hãy gỡ bỏ, không cập nhật'"]
     SelMinor --> Out
     SelNone --> Out

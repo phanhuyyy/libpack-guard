@@ -34,6 +34,7 @@ const ICONS: Record<string, string> = {
   plus: "M12 5v14M5 12h14",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
   x: "M6 6l12 12M18 6L6 18",
+  trash: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
   sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
   moon: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z",
   monitor: "M3 4h18v12H3zM8 20h8M12 16v4",

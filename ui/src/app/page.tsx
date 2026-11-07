@@ -16,15 +16,17 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const [{ t, fd, fn }, res, report] = await Promise.all([getI18n(), loadResult(), loadReport()]);
+  const { t, fd, fn, pm } = await getI18n();
+  const [res, report] = await Promise.all([loadResult(pm), loadReport(pm)]);
 
   if (!res) {
     return (
       <div className="card empty">
         <AppMark size={72} />
         <h1>{t("home.welcome")}</h1>
+        <p><span className="badge info" style={{ marginLeft: 0 }}>{pm}</span></p>
         <p className="muted">{t("home.welcomeText")}</p>
-        <p className="muted small-text">{t("home.savedAt", { path: resultPath() })}</p>
+        <p className="muted small-text">{t("home.savedAt", { path: resultPath(pm) })}</p>
         <ScanButton first />
       </div>
     );
@@ -48,7 +50,7 @@ export default async function Home() {
       <div className="page-head">
         <div>
           <div className="eyebrow"><Icon name="layers" size={14} /> {t("nav.overview")}</div>
-          <h1>{t("home.title", { host: res.machine.hostname })}</h1>
+          <h1>{t("home.title", { host: res.machine.hostname, pm })}</h1>
           <div className="subtitle">
             <span><Icon name="clock" size={15} /> {t("common.scannedAt", { t: fd(res.scanned_at) })}</span>
             <span><Icon name="computer" size={15} /> {res.machine.os}/{res.machine.arch} · {res.machine.username}</span>

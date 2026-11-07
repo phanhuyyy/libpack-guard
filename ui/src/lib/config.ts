@@ -63,7 +63,7 @@ export async function isDirectory(p: string): Promise<boolean> {
   }
 }
 
-/** Validates and writes <datadir>/config.json (the only file the UI writes besides security.json). */
+/** Validates and writes <datadir>/config.json (besides security-<pm>.json and backups/). */
 export async function saveConfig(input: { roots: unknown; max_depth: unknown }): Promise<ScanConfig> {
   if (!Array.isArray(input.roots) || input.roots.some((r) => typeof r !== "string")) {
     throw new I18nError("set.err.list");

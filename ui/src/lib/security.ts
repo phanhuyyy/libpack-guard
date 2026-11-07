@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { dataDir, type Pkg } from "./data";
+import type { PM } from "./pm";
 
 const OSV = "https://api.osv.dev/v1";
 const BATCH = 1000;
@@ -44,21 +45,21 @@ export function malwarePackages(report: SecurityReport | null) {
   return [...map.values()].sort((x, y) => x.name.localeCompare(y.name));
 }
 
-function reportPath() {
-  return path.join(dataDir(), "security.json");
+function reportPath(pm: PM) {
+  return path.join(dataDir(), `security-${pm}.json`);
 }
 
-export async function loadReport(): Promise<SecurityReport | null> {
+export async function loadReport(pm: PM): Promise<SecurityReport | null> {
   try {
-    return JSON.parse(await fs.readFile(reportPath(), "utf8")) as SecurityReport;
+    return JSON.parse(await fs.readFile(reportPath(pm), "utf8")) as SecurityReport;
   } catch {
     return null;
   }
 }
 
-async function saveReport(r: SecurityReport) {
+async function saveReport(r: SecurityReport, pm: PM) {
   await fs.mkdir(dataDir(), { recursive: true });
-  const file = reportPath();
+  const file = reportPath(pm);
   await fs.writeFile(file + ".tmp", JSON.stringify(r));
   await fs.rename(file + ".tmp", file);
 }
@@ -126,21 +127,23 @@ function severityOf(v: OsvVuln): Severity {
   }
 }
 
-let running: Promise<SecurityReport> | null = null;
+const running = new Map<PM, Promise<SecurityReport>>();
 
 /**
  * Sends only package names + versions (no paths, no machine info) to api.osv.dev
- * and stores the result in <datadir>/security.json.
+ * and stores the result in <datadir>/security-<pm>.json.
  */
-export function runSecurityCheck(pkgs: Pkg[], scanAt: string): Promise<SecurityReport> {
-  if (running) return running;
-  running = doCheck(pkgs, scanAt).finally(() => {
-    running = null;
+export function runSecurityCheck(pkgs: Pkg[], scanAt: string, pm: PM): Promise<SecurityReport> {
+  const cur = running.get(pm);
+  if (cur) return cur;
+  const p = doCheck(pkgs, scanAt, pm).finally(() => {
+    running.delete(pm);
   });
-  return running;
+  running.set(pm, p);
+  return p;
 }
 
-async function doCheck(pkgs: Pkg[], scanAt: string): Promise<SecurityReport> {
+async function doCheck(pkgs: Pkg[], scanAt: string, pm: PM): Promise<SecurityReport> {
   const pairs = [...new Map(pkgs.map((p) => [`${p.name}@${p.version}`, { name: p.name, version: p.version }])).values()];
   const errors: string[] = [];
   const idToPairs = new Map<string, { name: string; version: string }[]>();
@@ -201,6 +204,6 @@ async function doCheck(pkgs: Pkg[], scanAt: string): Promise<SecurityReport> {
     advisories,
     errors: [...new Set(errors)].slice(0, 10),
   };
-  await saveReport(report);
+  await saveReport(report, pm);
   return report;
 }
