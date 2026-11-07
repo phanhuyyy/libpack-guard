@@ -10,20 +10,21 @@
 |---|---|---|---|---|
 | `POST` | `/api/scan` | — | `{ ok, message }` | 运行 `pkgscan scan` |
 | `GET` | `/api/registry` | `?name=&versions=a,b` | `RegistryInfo`（`latest`、`inMajor`、`deprecated`、`missing`…） | 调用 registry（缓存 30 分钟） |
-| `POST` | `/api/security` | — | `{ ok, malware, vulns }` | 调用 OSV，写入 `security.json` |
+| `POST` | `/api/security` | — | `{ ok, malware, vulns }` | 调用 OSV，写入 `security-{pm}.json` |
 | `POST` | `/api/fs` | `{ path? }` | `{ shortcuts }` 或 `{ path, parent, dirs[] }` | 只列出目录名称 |
 | `POST` | `/api/config` | `{ roots[], max_depth }` | `{ ok, config }` | 写入 `config.json` |
 | `POST` | `/api/fix` | `{ root, name, version, mode: "plan" \| "apply", target? }` | `plan`：`{ action }` · `apply`：`{ status, after[], log, backup, action }` | `apply`：**运行 npm**、备份、重新扫描、重新检查 OSV |
+| `POST` | `/api/uninstall` | `{ root, name, version, mode: "plan" \| "apply" }` | `plan`：`{ action }` · `apply`：`{ status: "removed" \| "stillPresent", after[], log, backup, action }` | `apply`：**运行 `npm uninstall`**（仅限直接依赖或顶层全局包）、备份、重新扫描、重新检查 OSV |
 
 `/api/fix` 不带 `target` 时为**修复漏洞**（服务器自动选择修复版本）。带 `target` 时为来自更新标签页的**升级**（服务器验证 `target`）。
 
 ## pkgscan 命令行
 
 ```text
-pkgscan scan              扫描并将结果保存到数据目录
-pkgscan scan --dry-run    扫描并将 JSON 打印到屏幕，不保存
-pkgscan find <名称> [--version <版本>]
-                          在最近一次扫描结果中查找包
+pkgscan scan [--manager npm|pnpm]            扫描并保存（默认：两者都扫描，各一个文件）
+pkgscan scan --manager npm|pnpm --dry-run    只扫描一种包管理器并打印 JSON，不保存
+pkgscan find <名称> [--version <版本>] [--manager npm|pnpm]
+                                             在最近的扫描结果中查找包
 pkgscan version
 ```
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/Brand";
 import FixButton from "@/components/FixButton";
+import UninstallButton from "@/components/UninstallButton";
 import SecurityCheckButton from "@/components/SecurityCheckButton";
 import { loadResult, type Pkg } from "@/lib/data";
 import { analyzeScripts } from "@/lib/heuristics";
@@ -52,7 +53,8 @@ function PkgLink({ name, version }: { name: string; version: string }) {
 }
 
 export default async function SecurityPage() {
-  const [{ t, fd, fn }, res, report] = await Promise.all([getI18n(), loadResult(), loadReport()]);
+  const { t, fd, fn, pm } = await getI18n();
+  const [res, report] = await Promise.all([loadResult(pm), loadReport(pm)]);
   if (!res) {
     return (
       <div className="card empty">
@@ -129,7 +131,7 @@ export default async function SecurityPage() {
           </div>
           <div className="table-wrap">
             <table className="fixed mal">
-              <thead><tr><th>{t("common.package")}</th><th>{t("sec.col.alert")}</th><th>{t("common.location")}</th></tr></thead>
+              <thead><tr><th>{t("common.package")}</th><th>{t("sec.col.alert")}</th><th>{t("common.location")}</th><th>{t("un.col")}</th></tr></thead>
               <tbody>
                 {malware.map((m) => (
                   <tr key={m.name + m.version}>
@@ -142,6 +144,13 @@ export default async function SecurityPage() {
                       ))}
                     </td>
                     <td className="path where"><Where installs={installsOf(res.packages, m.name, m.version)} t={t} /></td>
+                    <td>
+                      <UninstallButton
+                        name={m.name}
+                        version={m.version}
+                        roots={[...new Set(installsOf(res.packages, m.name, m.version).map((p) => p.project_root))]}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -165,7 +174,7 @@ export default async function SecurityPage() {
           <div className="table-wrap">
             <table className="fixed scripts">
               <thead>
-                <tr><th>{t("common.package")}</th><th>{t("sec.scripts.level")}</th><th>{t("sec.scripts.signals")}</th><th>{t("common.location")}</th></tr>
+                <tr><th>{t("common.package")}</th><th>{t("sec.scripts.level")}</th><th>{t("sec.scripts.signals")}</th><th>{t("common.location")}</th><th>{t("un.col")}</th></tr>
               </thead>
               <tbody>
                 {suspicious.map((s) => (
@@ -181,6 +190,9 @@ export default async function SecurityPage() {
                       ))}
                     </td>
                     <td className="path where"><Where installs={s.installs} t={t} /></td>
+                    <td>
+                      <UninstallButton name={s.name} version={s.version} roots={[...new Set(s.installs.map((p) => p.project_root))]} />
+                    </td>
                   </tr>
                 ))}
               </tbody>

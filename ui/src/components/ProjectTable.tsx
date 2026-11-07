@@ -6,12 +6,13 @@ import { diff, type Diff } from "@/lib/semver";
 import { Icon } from "./Brand";
 import { useI18n } from "./I18nProvider";
 import { lookup, pool, type Lookup } from "./registry-client";
+import UninstallButton from "./UninstallButton";
 
-type Row = { name: string; version: string; direct: boolean; license?: string };
+type Row = { name: string; version: string; direct: boolean; license?: string; removable?: boolean };
 
 const MAX_CHECK = 300;
 
-export default function ProjectTable({ rows }: { rows: Row[] }) {
+export default function ProjectTable({ rows, root }: { rows: Row[]; root: string }) {
   const { t } = useI18n();
   const [results, setResults] = useState<Record<string, Lookup>>({});
   const [busy, setBusy] = useState(false);
@@ -88,6 +89,7 @@ export default function ProjectTable({ rows }: { rows: Row[] }) {
               <th>{t("proj.latestCol")}</th>
               <th>{t("reg.status")}</th>
               <th>{t("common.license")}</th>
+              <th>{t("un.col")}</th>
             </tr>
           </thead>
           <tbody>
@@ -107,11 +109,12 @@ export default function ProjectTable({ rows }: { rows: Row[] }) {
                     {s.note && <div className="err small-text">{s.note}</div>}
                   </td>
                   <td className="muted">{row.license ?? ""}</td>
+                  <td>{row.removable ? <UninstallButton name={row.name} version={row.version} roots={[root]} /> : null}</td>
                 </tr>
               );
             })}
             {shown.length === 0 && (
-              <tr><td colSpan={5} className="muted" style={{ textAlign: "center", padding: 24 }}>{t("proj.noMatch")}</td></tr>
+              <tr><td colSpan={6} className="muted" style={{ textAlign: "center", padding: 24 }}>{t("proj.noMatch")}</td></tr>
             )}
           </tbody>
         </table>

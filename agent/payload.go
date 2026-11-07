@@ -1,7 +1,9 @@
 package main
 
-// Result is what `scan` writes to <datadir>/latest.json and what the UI reads.
+// Result is what `scan --manager <m>` writes to <datadir>/latest-<m>.json and what the UI reads.
 type Result struct {
+	// Manager is "npm" or "pnpm": each scan covers exactly one package manager.
+	Manager      string    `json:"manager"`
 	Machine      Machine   `json:"machine"`
 	AgentVersion string    `json:"agent_version"`
 	ScannedAt    string    `json:"scanned_at"`
@@ -34,4 +36,10 @@ type Package struct {
 	InstallScripts map[string]string `json:"install_scripts,omitempty"`
 	// HasInstallScript is set from the lockfile (v2/v3) even when node_modules is not present.
 	HasInstallScript bool `json:"has_install_script,omitempty"`
+	// Manager is "pnpm" for packages installed by pnpm; empty means npm.
+	Manager string `json:"manager,omitempty"`
+
+	// pnpmStoreDir is set (internally, never serialized) for records read from a
+	// node_modules/.pnpm store; used to drop orphaned store entries (see prunePnpmOrphans).
+	pnpmStoreDir string
 }

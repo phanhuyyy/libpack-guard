@@ -1,5 +1,8 @@
-// Command pkgscan inventories npm packages on this machine by reading lockfiles and
+// Command pkgscan inventories npm and pnpm packages on this machine by reading lockfiles and
 // package.json manifests only. It never starts external processes.
+//
+// npm and pnpm are kept completely separate: each scan covers one package manager and is
+// saved to its own file (latest-npm.json / latest-pnpm.json).
 package main
 
 import (
@@ -14,13 +17,13 @@ import (
 
 var version = "0.1.0" // overridden by -ldflags "-X main.version=..."
 
-const usage = `pkgscan - kiểm kê package npm trên máy này
+const usage = `pkgscan - kiểm kê package npm / pnpm trên máy này
 
 Cách dùng:
-  pkgscan scan              Quét và lưu kết quả vào thư mục dữ liệu
-  pkgscan scan --dry-run    Quét và in JSON ra màn hình, không lưu
-  pkgscan find <tên> [--version <phiên bản>]
-                            Tìm package trong kết quả quét gần nhất
+  pkgscan scan [--manager npm|pnpm]            Quét và lưu kết quả (mặc định: cả hai, mỗi loại một file)
+  pkgscan scan --manager npm|pnpm --dry-run    Quét và in JSON ra màn hình, không lưu
+  pkgscan find <tên> [--version <phiên bản>] [--manager npm|pnpm]
+                                               Tìm package trong kết quả quét gần nhất
   pkgscan version
 `
 
@@ -47,27 +50,49 @@ func main() {
 	}
 }
 
+// modesFrom turns the --manager flag into the list of package managers to handle.
+func modesFrom(flagValue string) ([]Mode, error) {
+	if flagValue == "" {
+		return []Mode{ModeNPM, ModePNPM}, nil
+	}
+	m, ok := parseMode(flagValue)
+	if !ok {
+		return nil, fmt.Errorf("--manager phải là npm hoặc pnpm")
+	}
+	return []Mode{m}, nil
+}
+
 func cmdScan(args []string) error {
 	fs := flag.NewFlagSet("scan", flag.ContinueOnError)
 	dry := fs.Bool("dry-run", false, "in JSON ra stdout, không lưu")
+	manager := fs.String("manager", "", "npm hoặc pnpm (mặc định: cả hai)")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+	modes, err := modesFrom(*manager)
+	if err != nil {
+		return err
+	}
+	if *dry && len(modes) != 1 {
+		return fmt.Errorf("--dry-run cần --manager npm hoặc --manager pnpm")
 	}
 	cfg, err := loadConfig()
 	if err != nil {
 		return fmt.Errorf("đọc cấu hình: %w", err)
 	}
-	res := runScan(cfg)
-	if *dry {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(res)
+	for _, m := range modes {
+		res := runScan(cfg, m)
+		if *dry {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			return enc.Encode(res)
+		}
+		path, err := saveResult(res, m)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("[%s] Đã quét %d package. Kết quả: %s\n", m, len(res.Packages), path)
 	}
-	path, err := saveResult(res)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Đã quét %d package. Kết quả: %s\n", len(res.Packages), path)
 	return nil
 }
 
@@ -79,6 +104,7 @@ func cmdFind(args []string) error {
 	}
 	fs := flag.NewFlagSet("find", flag.ContinueOnError)
 	ver := fs.String("version", "", "chỉ hiện phiên bản này")
+	manager := fs.String("manager", "", "npm hoặc pnpm (mặc định: cả hai)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -88,36 +114,46 @@ func cmdFind(args []string) error {
 	if name == "" {
 		return fmt.Errorf("thiếu tên package")
 	}
-	res, err := loadResult()
+	modes, err := modesFrom(*manager)
 	if err != nil {
-		return fmt.Errorf("chưa có kết quả quét, hãy chạy `pkgscan scan` trước (%w)", err)
+		return err
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "TÊN\tPHIÊN BẢN\tPHẠM VI\tDỰ ÁN")
-	n := 0
-	for _, p := range res.Packages {
-		if !strings.EqualFold(p.Name, name) || (*ver != "" && p.Version != *ver) {
+	fmt.Fprintln(w, "LOẠI\tTÊN\tPHIÊN BẢN\tPHẠM VI\tDỰ ÁN")
+	n, found := 0, 0
+	for _, m := range modes {
+		res, err := loadResult(m)
+		if err != nil {
 			continue
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", p.Name, p.Version, p.Scope, p.ProjectRoot)
-		n++
+		found++
+		for _, p := range res.Packages {
+			if !strings.EqualFold(p.Name, name) || (*ver != "" && p.Version != *ver) {
+				continue
+			}
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", m, p.Name, p.Version, p.Scope, p.ProjectRoot)
+			n++
+		}
+	}
+	if found == 0 {
+		return fmt.Errorf("chưa có kết quả quét, hãy chạy `pkgscan scan` trước")
 	}
 	w.Flush()
-	fmt.Printf("\n%d kết quả (lần quét %s)\n", n, res.ScannedAt)
+	fmt.Printf("\n%d kết quả\n", n)
 	return nil
 }
 
-func resultPath() (string, error) {
+func resultPath(m Mode) (string, error) {
 	d, err := dataDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(d, "latest.json"), nil
+	return filepath.Join(d, "latest-"+string(m)+".json"), nil
 }
 
-// saveResult writes latest.json atomically inside the agent's data dir.
-func saveResult(res Result) (string, error) {
-	path, err := resultPath()
+// saveResult writes latest-<manager>.json atomically inside the agent's data dir.
+func saveResult(res Result, m Mode) (string, error) {
+	path, err := resultPath(m)
 	if err != nil {
 		return "", err
 	}
@@ -135,9 +171,9 @@ func saveResult(res Result) (string, error) {
 	return path, os.Rename(tmp, path)
 }
 
-func loadResult() (Result, error) {
+func loadResult(m Mode) (Result, error) {
 	var res Result
-	path, err := resultPath()
+	path, err := resultPath(m)
 	if err != nil {
 		return res, err
 	}

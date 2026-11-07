@@ -30,7 +30,7 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { locale, theme, t } = await getI18n();
+  const { locale, theme, t, pm } = await getI18n();
   return (
     <html
       lang={LOCALE_META[locale].html}
@@ -49,7 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </span>
               </Link>
               <NavLinks />
-              <Preferences initialTheme={theme} />
+              <Preferences initialTheme={theme} pm={pm} />
             </div>
           </header>
           <main id="main">{children}</main>

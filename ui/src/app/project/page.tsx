@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon, ScopeBadge } from "@/components/Brand";
 import ProjectTable from "@/components/ProjectTable";
-import { isTopLevelGlobal, loadResult } from "@/lib/data";
+import { isTopLevel, loadResult } from "@/lib/data";
 import { getI18n } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,8 @@ export async function generateMetadata({ searchParams }: { searchParams: SP }): 
 
 
 export default async function ProjectPage({ searchParams }: { searchParams: SP }) {
-  const [{ root = "", all }, { t, fd }, res] = await Promise.all([searchParams, getI18n(), loadResult()]);
+  const [{ root = "", all }, { t, fd, pm }] = await Promise.all([searchParams, getI18n()]);
+  const res = await loadResult(pm);
   const pkgs = res?.packages.filter((p) => p.project_root === root) ?? [];
 
   if (!root || pkgs.length === 0) {
@@ -31,14 +32,20 @@ export default async function ProjectPage({ searchParams }: { searchParams: SP }
   }
 
   const isGlobal = pkgs[0].scope === "global";
-  const directCount = pkgs.filter((p) => p.direct).length;
-  const topCount = isGlobal ? pkgs.filter((p) => isTopLevelGlobal(p.source_file, root)).length : directCount;
+  const topCount = pkgs.filter((p) => isTopLevel(p)).length;
   // Default: direct dependencies (if the lockfile says which). Global dirs: top-level packages only.
-  const canFilter = directCount > 0 || isGlobal;
+  const canFilter = topCount > 0;
   const showAll = all === "1" || !canFilter;
   const rows = pkgs
-    .filter((p) => showAll || (isGlobal ? isTopLevelGlobal(p.source_file, root) : p.direct))
-    .map((p) => ({ name: p.name, version: p.version, direct: !!p.direct, license: p.license }));
+    .filter((p) => showAll || isTopLevel(p))
+    .map((p) => ({
+      name: p.name,
+      version: p.version,
+      direct: !!p.direct,
+      license: p.license,
+      // only what the user controls directly can be removed
+      removable: isTopLevel(p),
+    }));
   const href = (a: boolean) => `/project?root=${encodeURIComponent(root)}${a ? "&all=1" : ""}`;
 
   return (
@@ -70,7 +77,7 @@ export default async function ProjectPage({ searchParams }: { searchParams: SP }
             </div>
           )}
         </div>
-        <ProjectTable rows={rows} />
+        <ProjectTable rows={rows} root={root} />
       </section>
     </>
   );

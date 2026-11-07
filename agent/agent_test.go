@@ -151,7 +151,7 @@ func TestSymlinkLoop(t *testing.T) {
 	}
 
 	done := make(chan []Package, 1)
-	go func() { done <- scanRoots([]string{root}, 50) }()
+	go func() { done <- scanRoots([]string{root}, 50, ModeNPM) }()
 	select {
 	case pkgs := <-done:
 		if len(pkgs) != 1 || pkgs[0].Name != "a" {
@@ -193,7 +193,7 @@ func TestSkipDirsAndDepth(t *testing.T) {
 	write(filepath.Join(root, "Temp", "p"))
 	write(filepath.Join(root, "a", "b", "c", "deep"))
 	write(filepath.Join(root, "ok"))
-	pkgs := scanRoots([]string{root}, 2)
+	pkgs := scanRoots([]string{root}, 2, ModeNPM)
 	if len(pkgs) != 1 || pkgs[0].ProjectRoot != filepath.Join(root, "ok") {
 		t.Errorf("want only root/ok, got %+v", pkgs)
 	}

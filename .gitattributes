@@ -1,0 +1,4 @@
+# Keep LF everywhere (gofmt requires it; avoids CRLF churn from core.autocrlf on Windows)
+* text=auto eol=lf
+*.png binary
+*.ico binary

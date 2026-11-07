@@ -7,7 +7,7 @@
 | Component | Reads | Writes | Runs processes | Network |
 |---|---|---|---|---|
 | **pkgscan** | Only `package-lock.json` and `node_modules/**/package.json` | Only the libpack data folder | **Never** (a test forbids importing `os/exec`, `syscall`) | **None** |
-| **UI server** | `latest.json`, `security.json`, `config.json`; subfolder names (folder browser) | `config.json`, `security.json`, `backups/` | `pkgscan scan`; `npm` **only after the user confirms** | registry.npmjs.org, api.osv.dev, only on click |
+| **UI server** | `latest-{pm}.json`, `security-{pm}.json`, `config.json`; subfolder names (folder browser) | `config.json`, `security-{pm}.json`, `backups/` | `pkgscan scan`; `npm` **only after the user confirms** | registry.npmjs.org, api.osv.dev, only on click |
 | **Browser** | Through the API | `lang`, `theme` cookies | No | Only to `127.0.0.1` |
 
 ## Guardrails when running npm
@@ -16,7 +16,7 @@
 flowchart TD
     Click["User clicks 'Run update'"] --> O1{"Origin = UI and<br/>Host is loopback?"}
     O1 -- No --> X1["403"]
-    O1 -- Yes --> O2{"Record present in<br/>latest.json?"}
+    O1 -- Yes --> O2{"Record present in<br/>latest-{pm}.json?"}
     O2 -- No --> X2["Refuse"]
     O2 -- Yes --> O3{"Current package<br/>is malware?"}
     O3 -- Yes --> X3["Refuse: remove it"]

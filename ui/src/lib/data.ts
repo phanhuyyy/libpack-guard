@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { PM } from "./pm";
 
 export type Pkg = {
   ecosystem: "npm";
@@ -17,9 +18,12 @@ export type Pkg = {
   repository?: string;
   install_scripts?: Record<string, string>;
   has_install_script?: boolean;
+  /** "pnpm" when installed by pnpm; absent means npm */
+  manager?: "pnpm";
 };
 
 export type ScanResult = {
+  manager?: PM;
   machine: { hostname: string; os: string; arch: string; username: string };
   agent_version: string;
   scanned_at: string;
@@ -41,37 +45,39 @@ export function dataDir(): string {
   }
 }
 
-export function resultPath(): string {
-  return path.join(dataDir(), "latest.json");
+export function resultPath(pm: PM): string {
+  return path.join(dataDir(), `latest-${pm}.json`);
 }
 
-let cache: { mtimeMs: number; data: ScanResult } | null = null;
+const cache = new Map<PM, { mtimeMs: number; data: ScanResult }>();
 
 /** Returns the latest scan, or null if no scan has been run yet. Re-parses only when the file changes. */
-export async function loadResult(): Promise<ScanResult | null> {
-  const file = resultPath();
+export async function loadResult(pm: PM): Promise<ScanResult | null> {
+  const file = resultPath(pm);
   let stat;
   try {
     stat = await fs.stat(file);
   } catch {
     return null;
   }
-  if (cache && cache.mtimeMs === stat.mtimeMs) return cache.data;
+  const hit = cache.get(pm);
+  if (hit && hit.mtimeMs === stat.mtimeMs) return hit.data;
   let data: ScanResult;
   try {
     data = JSON.parse(await fs.readFile(file, "utf8")) as ScanResult;
   } catch (e) {
-    console.error(`latest.json is corrupt, ignoring: ${(e as Error).message}`);
+    console.error(`${path.basename(file)} is corrupt, ignoring: ${(e as Error).message}`);
     return null; // treated as "no scan yet": the user can simply scan again
   }
   data.packages ??= [];
-  cache = { mtimeMs: stat.mtimeMs, data };
+  cache.set(pm, { mtimeMs: stat.mtimeMs, data });
   return data;
 }
 
 export type ProjectSummary = {
   root: string;
   scope: "global" | "project";
+  manager: "npm" | "pnpm";
   total: number;
   direct: number;
 };
@@ -81,11 +87,12 @@ export function summarizeProjects(pkgs: Pkg[]): ProjectSummary[] {
   for (const p of pkgs) {
     let s = map.get(p.project_root);
     if (!s) {
-      s = { root: p.project_root, scope: p.scope, total: 0, direct: 0 };
+      s = { root: p.project_root, scope: p.scope, manager: "npm", total: 0, direct: 0 };
       map.set(p.project_root, s);
     }
     s.total++;
     if (p.direct) s.direct++;
+    if (p.manager === "pnpm") s.manager = "pnpm";
   }
   return [...map.values()].sort((a, b) =>
     a.scope !== b.scope ? (a.scope === "global" ? -1 : 1) : a.root.localeCompare(b.root),
@@ -96,4 +103,15 @@ export function summarizeProjects(pkgs: Pkg[]): ProjectSummary[] {
 export function isTopLevelGlobal(sourceFile: string, root: string): boolean {
   const rel = sourceFile.slice(root.length).replace(/\\/g, "/").replace(/^\//, "");
   return !rel.includes("node_modules/");
+}
+
+/**
+ * A package the user controls directly (can be updated / removed by name):
+ *  - project: a direct dependency
+ *  - npm global: <root>/<name>, not nested inside another global package
+ *  - pnpm global: a top-level link (the agent marks those as direct)
+ */
+export function isTopLevel(p: Pkg): boolean {
+  if (p.scope === "project") return !!p.direct;
+  return p.manager === "pnpm" ? !!p.direct : isTopLevelGlobal(p.source_file, p.project_root);
 }

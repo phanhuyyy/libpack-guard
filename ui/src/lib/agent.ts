@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { I18nError } from "./i18n";
+import type { PM } from "./pm";
 
 /** Path of the pkgscan binary built by agent/build.ps1. */
 export function agentPath(): string {
@@ -12,25 +13,27 @@ export function agentPath(): string {
   return path.resolve(process.cwd(), "..", "agent", "dist", `pkgscan-${goos}-${goarch}${ext}`);
 }
 
-let running: Promise<string> | null = null;
+const running = new Map<PM, Promise<string>>();
 
 /**
  * Runs our own `pkgscan scan` binary (fixed path, fixed args, no shell).
  * pkgscan itself never starts processes and never runs npm.
  */
-export function runScan(): Promise<string> {
-  if (running) return running;
+export function runScan(pm: PM): Promise<string> {
+  const cur = running.get(pm);
+  if (cur) return cur;
   const bin = agentPath();
   if (!existsSync(/*turbopackIgnore: true*/ bin)) {
     return Promise.reject(new I18nError("scan.agentMissing", { path: bin }));
   }
-  running = new Promise<string>((resolve, reject) => {
-    execFile(/*turbopackIgnore: true*/ bin, ["scan"], { timeout: 15 * 60_000, windowsHide: true, shell: false }, (err, stdout, stderr) => {
+  const p = new Promise<string>((resolve, reject) => {
+    execFile(/*turbopackIgnore: true*/ bin, ["scan", "--manager", pm], { timeout: 15 * 60_000, windowsHide: true, shell: false }, (err, stdout, stderr) => {
       if (err) reject(new Error((stderr || err.message).trim()));
       else resolve(stdout.trim());
     });
   }).finally(() => {
-    running = null;
+    running.delete(pm);
   });
-  return running;
+  running.set(pm, p);
+  return p;
 }

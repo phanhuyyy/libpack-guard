@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon, ScopeBadge } from "@/components/Brand";
 import PackageCheck from "@/components/PackageCheck";
-import { loadResult } from "@/lib/data";
+import UninstallButton from "@/components/UninstallButton";
+import { isTopLevel, loadResult } from "@/lib/data";
 import { analyzeScripts } from "@/lib/heuristics";
 import { getI18n } from "@/lib/i18n-server";
 import { loadReport } from "@/lib/security";
@@ -28,7 +29,8 @@ function safeUrl(u?: string): string | null {
 }
 
 export default async function PackagePage({ searchParams }: { searchParams: SP }) {
-  const [{ name = "" }, { t }, res, report] = await Promise.all([searchParams, getI18n(), loadResult(), loadReport()]);
+  const [{ name = "" }, { t, pm }] = await Promise.all([searchParams, getI18n()]);
+  const [res, report] = await Promise.all([loadResult(pm), loadReport(pm)]);
   const rows = res?.packages.filter((p) => p.name === name) ?? [];
 
   if (!name || rows.length === 0) {
@@ -131,22 +133,30 @@ export default async function PackagePage({ searchParams }: { searchParams: SP }
                 <th>{t("common.version")}</th>
                 <th>{t("common.type")}</th>
                 <th>{t("common.folder")}</th>
+                <th>{t("un.col")}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((p) => (
-                <tr key={p.version + p.project_root + p.source_file}>
-                  <td>
-                    <span className="version">{p.version}</span>
-                    {p.direct && <span className="badge info">{t("common.direct")}</span>}
-                  </td>
-                  <td><ScopeBadge scope={p.scope} t={t} /></td>
-                  <td className="path">
-                    <Link href={`/project?root=${encodeURIComponent(p.project_root)}`}>{p.project_root}</Link>
-                    <div className="muted small-text" title={p.source_file}>{p.source_file.slice(p.project_root.length)}</div>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((p) => {
+                // only what the user controls directly can be removed here
+                const removable = isTopLevel(p);
+                return (
+                  <tr key={p.version + p.project_root + p.source_file}>
+                    <td>
+                      <span className="version">{p.version}</span>
+                      {p.direct && <span className="badge info">{t("common.direct")}</span>}
+                    </td>
+                    <td><ScopeBadge scope={p.scope} t={t} /></td>
+                    <td className="path">
+                      <Link href={`/project?root=${encodeURIComponent(p.project_root)}`}>{p.project_root}</Link>
+                      <div className="muted small-text" title={p.source_file}>{p.source_file.slice(p.project_root.length)}</div>
+                    </td>
+                    <td>
+                      {removable ? <UninstallButton name={p.name} version={p.version} roots={[p.project_root]} /> : <span className="muted">—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

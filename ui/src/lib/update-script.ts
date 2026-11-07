@@ -1,17 +1,19 @@
 /**
- * Builds npm update commands for the user to review and run themselves.
+ * Builds npm / pnpm update commands for the user to review and run themselves.
  * Nothing here executes anything. Every command uses --ignore-scripts.
  */
 
-export type Selected = { root: string; global: boolean; name: string; target: string };
-export type Group = { root: string; global: boolean; specs: string[] };
+export type Manager = "npm" | "pnpm";
+export type Selected = { root: string; global: boolean; name: string; target: string; manager: Manager };
+export type Group = { root: string; global: boolean; manager: Manager; specs: string[] };
 
 export function groupByRoot(items: Selected[]): Group[] {
   const map = new Map<string, Group>();
   for (const it of items) {
-    const g = map.get(it.root) ?? { root: it.root, global: it.global, specs: [] };
+    const key = `${it.manager}\u0000${it.root}`;
+    const g = map.get(key) ?? { root: it.root, global: it.global, manager: it.manager, specs: [] };
     g.specs.push(`${it.name}@${it.target}`);
-    map.set(it.root, g);
+    map.set(key, g);
   }
   return [...map.values()].sort((a, b) => (a.global === b.global ? a.root.localeCompare(b.root) : a.global ? -1 : 1));
 }
@@ -26,18 +28,31 @@ export function shQuote(s: string): string {
   return `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
-function npmArgs(g: Group, q: (s: string) => string): string {
-  return `install ${g.global ? "-g " : ""}--ignore-scripts ${g.specs.map(q).join(" ")}`;
+/**
+ * The package-manager invocation for one folder (without cd).
+ *  npm  project: npm install --ignore-scripts a@1 b@2
+ *  npm  global:  npm install -g --ignore-scripts a@1
+ *  pnpm project: pnpm update --ignore-scripts a@1 b@2   (keeps dependencies / devDependencies)
+ *  pnpm global:  pnpm add -g --ignore-scripts a@1
+ */
+function toolCommand(g: Group, q: (s: string) => string, windows: boolean): string {
+  const specs = g.specs.map(q).join(" ");
+  if (g.manager === "pnpm") {
+    const bin = windows ? "pnpm.cmd" : "pnpm";
+    return g.global ? `${bin} add -g --ignore-scripts ${specs}` : `${bin} update --ignore-scripts ${specs}`;
+  }
+  const bin = windows ? "npm.cmd" : "npm";
+  return `${bin} install ${g.global ? "-g " : ""}--ignore-scripts ${specs}`;
 }
 
 /** One-line command for a single folder, in the shell of the machine. */
 export function inlineCommand(g: Group, windows: boolean): string {
   if (windows) {
-    const npm = `npm.cmd ${npmArgs(g, psQuote)}`;
-    return g.global ? npm : `Set-Location -LiteralPath ${psQuote(g.root)}; ${npm}`;
+    const cmd = toolCommand(g, psQuote, true);
+    return g.global ? cmd : `Set-Location -LiteralPath ${psQuote(g.root)}; ${cmd}`;
   }
-  const npm = `npm ${npmArgs(g, shQuote)}`;
-  return g.global ? npm : `cd ${shQuote(g.root)} && ${npm}`;
+  const cmd = toolCommand(g, shQuote, false);
+  return g.global ? cmd : `cd ${shQuote(g.root)} && ${cmd}`;
 }
 
 /** Full script covering every folder; a failure in one folder does not stop the others. */
@@ -45,16 +60,16 @@ export function fullScript(groups: Group[], windows: boolean, generatedAt: strin
   const header = [
     `libpack update plan - generated ${generatedAt}`,
     "Review before running. --ignore-scripts: package install scripts will NOT run.",
-    "Packages that need a build step may need 'npm rebuild <name>' afterwards (only if you trust them).",
+    "Packages that need a build step may need 'npm rebuild <name>' / 'pnpm rebuild <name>' afterwards (only if you trust them).",
   ];
   if (windows) {
     const lines = [...header.map((h) => `# ${h}`), "", "$failed = @()"];
     for (const g of groups) {
-      lines.push("", `Write-Host ${psQuote(`==> ${g.root}`)} -ForegroundColor Cyan`);
+      lines.push("", `Write-Host ${psQuote(`==> [${g.manager}] ${g.root}`)} -ForegroundColor Cyan`);
       if (g.global) {
-        lines.push(`npm.cmd ${npmArgs(g, psQuote)}`);
+        lines.push(toolCommand(g, psQuote, true));
       } else {
-        lines.push(`Push-Location -LiteralPath ${psQuote(g.root)}`, `npm.cmd ${npmArgs(g, psQuote)}`);
+        lines.push(`Push-Location -LiteralPath ${psQuote(g.root)}`, toolCommand(g, psQuote, true));
       }
       lines.push(`if ($LASTEXITCODE -ne 0) { $failed += ${psQuote(g.root)} }`);
       if (!g.global) lines.push("Pop-Location");
@@ -68,8 +83,9 @@ export function fullScript(groups: Group[], windows: boolean, generatedAt: strin
   }
   const lines = ["#!/bin/sh", ...header.map((h) => `# ${h}`), "", "failed=''"];
   for (const g of groups) {
-    lines.push("", `echo ${shQuote(`==> ${g.root}`)}`);
-    const run = g.global ? `npm ${npmArgs(g, shQuote)}` : `(cd ${shQuote(g.root)} && npm ${npmArgs(g, shQuote)})`;
+    lines.push("", `echo ${shQuote(`==> [${g.manager}] ${g.root}`)}`);
+    const cmd = toolCommand(g, shQuote, false);
+    const run = g.global ? cmd : `(cd ${shQuote(g.root)} && ${cmd})`;
     lines.push(`${run} || failed="$failed ${g.root.replace(/[^\w./-]/g, "_")}"`);
   }
   lines.push("", 'if [ -n "$failed" ]; then echo "Failed:$failed"; else echo "Done."; fi', "");

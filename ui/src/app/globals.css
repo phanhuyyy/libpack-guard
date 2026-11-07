@@ -225,6 +225,7 @@ table.mal th:nth-child(3) { width: 28%; }
 table.scripts th:nth-child(1) { width: 18%; }
 table.scripts th:nth-child(2) { width: 130px; }
 table.scripts th:nth-child(4) { width: 26%; }
+table.mal th:nth-child(4), table.scripts th:nth-child(5) { width: 120px; }
 .bar { height: 6px; background: var(--surface-3); border-radius: 999px; overflow: hidden; min-width: 80px; flex: 1; }
 .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 999px; }
 
@@ -463,3 +464,21 @@ pre.notice.log { display: block; background: var(--bad-bg); color: var(--bad); }
 table.vuln td:last-child button { white-space: nowrap; }
 
 td button.small { white-space: nowrap; }
+
+/* Uninstall */
+button.danger { background: var(--bad-solid); border-color: var(--bad-solid); color: #fff; }
+button.danger:hover:not(:disabled) { filter: brightness(1.08); background: var(--bad-solid); }
+button.danger-ghost { color: var(--bad); }
+button.danger-ghost:hover:not(:disabled) { background: var(--bad-bg); }
+td .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* package manager badge */
+.badge.pnpm { background: rgba(249, 173, 0, 0.16); color: #b26a00; }
+:root[data-theme="dark"] .badge.pnpm { color: #fbbf24; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .badge.pnpm { color: #fbbf24; } }
+
+/* npm / pnpm workspace switch: the most important toggle, so it stands out */
+.segmented.pm-switch { background: var(--primary-soft); border-color: transparent; }
+.segmented.pm-switch button { gap: 6px; font-weight: 700; color: var(--primary-text); padding: 4px 11px; }
+.segmented.pm-switch button.on { background: var(--primary); color: var(--on-primary); }
+@media (max-width: 640px) { .prefs { flex-wrap: wrap; justify-content: flex-end; } }

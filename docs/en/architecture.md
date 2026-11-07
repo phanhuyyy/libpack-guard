@@ -23,7 +23,7 @@ flowchart TB
     subgraph Disk["Machine disk"]
         Projects["Projects:<br/>package-lock.json<br/>node_modules/**/package.json"]
         Global["Global npm:<br/>%AppData%\npm\node_modules"]
-        DataDir["libpack data folder:<br/>latest.json, security.json,<br/>config.json, backups/"]
+        DataDir["libpack data folder:<br/>latest-{pm}.json, security-{pm}.json,<br/>config.json, backups/"]
     end
 
     subgraph Internet["Internet — only when the user clicks"]
@@ -38,7 +38,7 @@ flowchart TB
     Lib -- "execFile, no shell" --> Scan
     Scan -- "read only" --> Projects
     Scan -- "read only" --> Global
-    Scan -- "writes latest.json" --> DataDir
+    Scan -- "writes latest-{pm}.json" --> DataDir
     Lib -- "read / write" --> DataDir
     Lib -- "GET metadata" --> Registry
     Lib -- "name + version" --> OSV
@@ -63,7 +63,7 @@ libpack-guard/
 │   └── <language>/{workflows, architecture, security, api, development}.md
 ├── .gitignore
 ├── agent/                          # pkgscan — Go, standard library only
-│   ├── main.go                     # scan / find / version commands, writes latest.json
+│   ├── main.go                     # scan / find / version commands, writes latest-{pm}.json
 │   ├── config.go                   # reads config.json (data folder → next to exe → defaults)
 │   ├── datadir.go                  # per-OS data folder
 │   ├── walk.go                     # safe walking: isPlainDir, 50 MB limit, skip list
@@ -93,11 +93,11 @@ libpack-guard/
         │   ├── UpdatePlanner, UpgradeButton, FixButton
         │   └── FolderPicker, ScanSettings
         └── lib/
-            ├── data.ts             # reads latest.json (cached by mtime), aggregates projects
+            ├── data.ts             # reads latest-{pm}.json (cached by mtime), aggregates projects
             ├── agent.ts            # runs pkgscan
             ├── config.ts           # reads / writes config.json, lists folders
             ├── heuristics.ts       # install-script analysis rules
-            ├── security.ts         # OSV querybatch / query, malware classification, security.json
+            ├── security.ts         # OSV querybatch / query, malware classification, security-{pm}.json
             ├── registry.ts         # npm registry + bestCompatible
             ├── updater.ts          # planAction / planUpgrade / applyAction (runs npm)
             ├── update-script.ts    # builds commands and .ps1 / .sh scripts
@@ -108,6 +108,8 @@ libpack-guard/
 ```
 
 ## Data and file formats
+
+> `{pm}` is `npm` or `pnpm`. The two package managers are kept completely separate: each has its own scan file and security report, chosen with the npm / pnpm switch in the top bar (cookie `pm`).
 
 ### Data folder
 
@@ -121,8 +123,8 @@ It can be overridden with the `LIBPACK_DATA_DIR` environment variable. Both pkgs
 
 ```
 libpack/
-├── latest.json        # latest scan result (written by pkgscan)
-├── security.json      # latest OSV lookup result (written by the UI)
+├── latest-{pm}.json        # latest scan result (written by pkgscan)
+├── security-{pm}.json      # latest OSV lookup result (written by the UI)
 ├── config.json        # scan folders + depth (written by the UI, read by pkgscan)
 └── backups/
     └── 2026-11-07T06-43-41-007Z/
@@ -131,7 +133,7 @@ libpack/
             └── package-lock.json
 ```
 
-### `latest.json`
+### `latest-{pm}.json`
 
 ```jsonc
 {
@@ -159,7 +161,7 @@ libpack/
 
 Records are deduplicated on **`name + version + project_root`**.
 
-### `security.json`
+### `security-{pm}.json`
 
 ```jsonc
 {

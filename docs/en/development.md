@@ -67,11 +67,11 @@ npx next start -H 127.0.0.1 -p 7790
 | After an update, a build tool fails (esbuild, sharp…) | Caused by `--ignore-scripts`. If you trust that package: `npm rebuild <name>` in the project folder. |
 | Want to undo an update | Copy `package.json` + `package-lock.json` from `%LOCALAPPDATA%\libpack\backups\<timestamp>\…` back into the project, then run `npm install --ignore-scripts`. |
 | Cannot reach the registry / OSV | Check the network and proxy. Private registries that require authentication are not supported yet (see [Known limitations](#known-limitations)). |
-| `latest.json` is corrupted | The UI treats it as no data. Click **Scan now** to regenerate it. |
+| `latest-{pm}.json` is corrupted | The UI treats it as no data. Click **Scan now** to regenerate it. |
 
 ## Known limitations
 
-- **npm only.** yarn, pnpm (uses symlinks, so it is skipped) and bun are not scanned. Packages of VS Code or browser extensions are not scanned either.
+- **npm and pnpm only.** yarn and bun are not scanned. For pnpm, only installed packages are seen (`pnpm-lock.yaml` itself is not read), and dependencies of pnpm *global* packages that live in pnpm's global virtual store are not listed — only the global packages themselves. Packages of VS Code or browser extensions are not scanned either.
 - **Only the latest scan is kept**; there is no change history.
 - **Malware detection relies on a list of known malware** (OSV.dev). A brand-new malicious package that nobody has reported yet will not be detected. Install-script analysis gives only signals and can produce false positives or miss things; for example, malware inside a `.js` file that the script calls is not visible, because the tool does not read source code.
 - **The "direct" flag is only available with lockfile v2/v3.** Projects with a v1 lockfile or no lockfile are skipped in the Updates tab.

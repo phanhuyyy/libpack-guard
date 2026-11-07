@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/Brand";
 import UpdatePlanner, { type Candidate } from "@/components/UpdatePlanner";
-import { isTopLevelGlobal, loadResult } from "@/lib/data";
+import { isTopLevel, loadResult } from "@/lib/data";
 import { getI18n } from "@/lib/i18n-server";
 import { loadReport, malwarePackages } from "@/lib/security";
 
@@ -14,7 +14,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function UpdatesPage() {
-  const [{ t, fn }, res, report] = await Promise.all([getI18n(), loadResult(), loadReport()]);
+  const { t, fn, pm } = await getI18n();
+  const [res, report] = await Promise.all([loadResult(pm), loadReport(pm)]);
   if (!res) {
     return (
       <div className="card empty">
@@ -31,13 +32,13 @@ export default async function UpdatesPage() {
   const projectRoots = new Set<string>();
   for (const p of res.packages) {
     if (p.scope === "project") projectRoots.add(p.project_root);
-    const eligible = p.scope === "global" ? isTopLevelGlobal(p.source_file, p.project_root) : !!p.direct;
+    const eligible = isTopLevel(p);
     if (!eligible) continue;
     if (p.scope === "project") rootsWithDirect.add(p.project_root);
     const key = `${p.project_root}\u0000${p.name}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    candidates.push({ root: p.project_root, scope: p.scope, name: p.name, version: p.version });
+    candidates.push({ root: p.project_root, scope: p.scope, name: p.name, version: p.version, manager: pm });
   }
   const skipped = [...projectRoots].filter((r) => !rootsWithDirect.has(r)).length;
 

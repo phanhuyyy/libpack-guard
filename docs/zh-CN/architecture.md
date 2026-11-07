@@ -23,7 +23,7 @@ flowchart TB
     subgraph Disk["本机磁盘"]
         Projects["项目：<br/>package-lock.json<br/>node_modules/**/package.json"]
         Global["全局 npm：<br/>%AppData%\npm\node_modules"]
-        DataDir["libpack 数据目录：<br/>latest.json, security.json,<br/>config.json, backups/"]
+        DataDir["libpack 数据目录：<br/>latest-{pm}.json, security-{pm}.json,<br/>config.json, backups/"]
     end
 
     subgraph Internet["互联网 — 仅在用户点击时"]
@@ -38,7 +38,7 @@ flowchart TB
     Lib -- "execFile，不经过 shell" --> Scan
     Scan -- "只读" --> Projects
     Scan -- "只读" --> Global
-    Scan -- "写入 latest.json" --> DataDir
+    Scan -- "写入 latest-{pm}.json" --> DataDir
     Lib -- "读取 / 写入" --> DataDir
     Lib -- "GET 元数据" --> Registry
     Lib -- "名称 + 版本" --> OSV
@@ -63,7 +63,7 @@ libpack-guard/
 │   └── <语言>/{workflows, architecture, security, api, development}.md
 ├── .gitignore
 ├── agent/                          # pkgscan — Go，仅使用标准库
-│   ├── main.go                     # scan / find / version 命令，写入 latest.json
+│   ├── main.go                     # scan / find / version 命令，写入 latest-{pm}.json
 │   ├── config.go                   # 读取 config.json（数据目录 → exe 旁 → 默认）
 │   ├── datadir.go                  # 按操作系统确定数据目录
 │   ├── walk.go                     # 安全遍历：isPlainDir、50 MB 限制、跳过列表
@@ -93,11 +93,11 @@ libpack-guard/
         │   ├── UpdatePlanner, UpgradeButton, FixButton
         │   └── FolderPicker, ScanSettings
         └── lib/
-            ├── data.ts             # 读取 latest.json（按 mtime 缓存），汇总项目
+            ├── data.ts             # 读取 latest-{pm}.json（按 mtime 缓存），汇总项目
             ├── agent.ts            # 运行 pkgscan
             ├── config.ts           # 读取 / 写入 config.json，列出目录
             ├── heuristics.ts       # 安装脚本分析规则
-            ├── security.ts         # OSV querybatch / query、恶意软件分类、security.json
+            ├── security.ts         # OSV querybatch / query、恶意软件分类、security-{pm}.json
             ├── registry.ts         # npm registry + bestCompatible
             ├── updater.ts          # planAction / planUpgrade / applyAction（运行 npm）
             ├── update-script.ts    # 生成命令和 .ps1 / .sh 脚本
@@ -108,6 +108,8 @@ libpack-guard/
 ```
 
 ## 数据与文件格式
+
+> `{pm}` 为 `npm` 或 `pnpm`。两种包管理器完全分开：各自有独立的扫描文件和安全报告，通过顶部栏的 npm / pnpm 开关选择（cookie `pm`）。
 
 ### 数据目录
 
@@ -121,8 +123,8 @@ libpack-guard/
 
 ```
 libpack/
-├── latest.json        # 最近一次扫描结果（pkgscan 写入）
-├── security.json      # 最近一次 OSV 比对结果（界面写入）
+├── latest-{pm}.json        # 最近一次扫描结果（pkgscan 写入）
+├── security-{pm}.json      # 最近一次 OSV 比对结果（界面写入）
 ├── config.json        # 扫描目录 + 深度（界面写入，pkgscan 读取）
 └── backups/
     └── 2026-11-07T06-43-41-007Z/
@@ -131,7 +133,7 @@ libpack/
             └── package-lock.json
 ```
 
-### `latest.json`
+### `latest-{pm}.json`
 
 ```jsonc
 {
@@ -159,7 +161,7 @@ libpack/
 
 记录按 **`name + version + project_root`** 去重。
 
-### `security.json`
+### `security-{pm}.json`
 
 ```jsonc
 {

@@ -16,6 +16,8 @@
   - 为所有项目制定更新计划，默认只升级补丁 / 次版本；
   - 一键更新单个包（需确认并自动备份），或下载 `.ps1` / `.sh` 脚本自行运行。
 - 🩹 **一键修复漏洞：** 服务器会自动选择正确的修复方式（安装修复版本、`npm update` 或更新父包），然后重新扫描以确认结果。
+- 📦 **npm 与 pnpm 完全分开：** 在顶部栏选择 **npm** 或 **pnpm**。扫描、搜索、安全检查和更新只针对当前选择的那个，各自使用独立的数据文件（`latest-npm.json` / `latest-pnpm.json`），且只运行对应的包管理器。pnpm 项目从 `node_modules/.pnpm` 读取（忽略遗留的旧版本），并包含 pnpm 全局包。
+- 🗑️ **卸载：** 在界面中卸载直接依赖或顶层全局包（例如恶意包），需确认，自动备份并重新扫描。
 - 🗂️ **在界面中选择扫描目录**，内置目录浏览器。
 - 🌐 **Tiếng Việt / English / 简体中文**，**浅色 / 深色 / 跟随系统** 主题。
 
@@ -57,7 +59,7 @@ flowchart LR
     UI["浏览器<br/>127.0.0.1:7788"] <--> S["Next.js 服务器"]
     S -- "运行" --> A["pkgscan (Go)<br/>只读"]
     A -- "读取" --> P["package-lock.json<br/>node_modules/**/package.json"]
-    A -- "写入" --> D[("latest.json")]
+    A -- "写入" --> D[("latest-{pm}.json")]
     S -- "点击时" --> N["registry.npmjs.org<br/>api.osv.dev"]
     S -- "确认后<br/>--ignore-scripts" --> NPM["npm"]
 ```
@@ -82,14 +84,14 @@ flowchart LR
 | 文档 | 内容 |
 |---|---|
 | [工作流程](docs/zh-CN/workflows.md) | 各个页面；扫描、版本检查、安全检查、修复、更新、多语言（含图示） |
-| [架构](docs/zh-CN/architecture.md) | 整体架构图、源码结构、`latest.json` / `security.json` / `config.json` 格式、环境变量 |
+| [架构](docs/zh-CN/architecture.md) | 整体架构图、源码结构、`latest-{pm}.json` / `security-{pm}.json` / `config.json` 格式、环境变量 |
 | [安全模型](docs/zh-CN/security.md) | 各组件的权限、运行 npm 时的防护措施、风险与对策 |
 | [API 与命令行](docs/zh-CN/api.md) | 界面内部 API、`pkgscan scan / find` 命令 |
 | [开发](docs/zh-CN/development.md) | 构建、测试、添加语言、故障排查、已知限制 |
 
 ## 主要限制
 
-- 仅支持 **npm**（暂不支持 yarn、pnpm、bun）。
+- 仅支持 **npm** 和 **pnpm**（暂不支持 yarn、bun）。
 - 只能检测**已被报告**的恶意包。安装脚本分析只给出迹象，并非结论。
 - 应用运行**在每台机器上**，因此无法原样部署到云端。
 
